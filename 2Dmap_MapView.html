@@ -65,18 +65,50 @@
 <script src="https://js.arcgis.com/4.0/"></script>
 <script>
 require([
+  "esri/tasks/Locator",
   "esri/Map",
   "esri/views/MapView",
   "dojo/domReady!"
-], function(Map, MapView) {
+], function(Locator, Map, MapView) {
+  // Create a locator task using the world geocoding service
+  var locatorTask = new Locator({
+    url: "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer"
+    });
+  //Create the Map
   var map = new Map({
     basemap: "hybrid"
   });
+  //Create the MapView
   var view = new MapView({
     container: "viewDiv",  // Reference to the DOM node that will contain the view
-    map: map               // References the map object
+    map: map,               // References the map object
+    center: [-122.989827, 45.522894],
+    zoom: 14
   });
 
+  view.on("click", function(evt) {
+      // Get the coordinates of the click on the view
+      // around the decimals to 3 decimals
+      var lat = Math.round(evt.mapPoint.latitude * 1000) / 1000;
+      var lon = Math.round(evt.mapPoint.longitude * 1000) / 1000;
+
+      view.popup.open({
+          // Set the popup's title to the coordinates of the clicked location
+          title: "Reverse geocode: [" + lon + ", " + lat + "]",
+          location: evt.mapPoint // Set the location of the popup to the clicked location
+      });
+   
+
+  // Execute a reverse geocode using the clicked location
+  locatorTask.locationToAddress(evt.mapPoint).then(function(response) {
+
+    // If an address is successfully found, print it to the popup's content;
+    view.popup.content = response.address.Match_addr;
+  }).otherwise(function(err) {
+    // If the promise fails and no result is found, print a generic message to the popup's content
+    view.popup.content = "No address was found for this location";
+  });
+  });
 });
 
   var changeBasemap =function(map) {
